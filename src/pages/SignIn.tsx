@@ -13,8 +13,6 @@ const CreateAccount = () => {
   const navigate = useNavigate();
   const { state, setUserInfo } = useConfigurator();
   const { toast } = useToast();
-
-  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -28,10 +26,6 @@ const CreateAccount = () => {
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
-
-    if (!name.trim()) {
-      newErrors.name = 'El nombre es requerido';
-    }
 
     if (!email.trim()) {
       newErrors.email = 'El email es requerido';
@@ -65,7 +59,7 @@ const CreateAccount = () => {
       return;
     }
 
-    setUserInfo(email, name);
+    setUserInfo(email, password);
 
     toast({
       title: 'Cuenta creada',
@@ -88,19 +82,6 @@ const CreateAccount = () => {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="space-y-2">
-            <Label htmlFor="name">Nombre completo</Label>
-            <Input
-              id="name"
-              type="text"
-              placeholder="Juan Pérez"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className={errors.name ? 'border-destructive' : ''}
-            />
-            {errors.name && <p className="text-sm text-destructive">{errors.name}</p>}
-          </div>
-
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
             <Input
@@ -163,13 +144,9 @@ const CreateAccount = () => {
           </Button>
 
           <p className="text-center text-sm text-muted-foreground">
-            ¿Ya tienes cuenta?{' '}
-            <button
-              type="button"
-              className="text-primary hover:underline"
-              onClick={() => navigate('/sign-in')}
-            >
-              Iniciar sesión
+            ¿No tienes cuenta?{' '}
+            <button type='button' className="text-primary hover:underline" onClick={()=>navigate('/sign-in')}>
+              Regístrate aquí
             </button>
           </p>
         </form>

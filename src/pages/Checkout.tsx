@@ -66,10 +66,6 @@ const Checkout = () => {
                   <h3 className="font-semibold mb-4">Detalles del cliente</h3>
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Nombre:</span>
-                      <span className="font-medium">{state.userName}</span>
-                    </div>
-                    <div className="flex justify-between">
                       <span className="text-muted-foreground">Email:</span>
                       <span className="font-medium">{state.userEmail}</span>
                     </div>

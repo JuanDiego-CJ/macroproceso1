@@ -40,11 +40,11 @@ const PaymentSuccess = () => {
     // Complete onboarding and set portal URL
     const finalTimer = setTimeout(() => {
       setOnboardingStatus('completed');
-      setPortalUrl('https://portal.tusolucio.com/dashboard'); // Mock URL
+      setPortalUrl('https://youtu.be/dz1MhkbPthI?list=RDdz1MhkbPthI'); // Mock URL
 
       // Auto-redirect after 3 seconds
       setTimeout(() => {
-        window.location.href = 'https://portal.tusolucio.com/dashboard';
+        window.location.href = 'https://youtu.be/dz1MhkbPthI?list=RDdz1MhkbPthI';
       }, 3000);
     }, 5000);
 
