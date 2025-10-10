@@ -9,9 +9,10 @@ import { useToast } from '@/hooks/use-toast';
 interface SchedulingModalProps {
   open: boolean;
   onClose: () => void;
+  onConfirm: (email: string, fecha: string, hora: string) => void;
 }
 
-export const SchedulingModal = ({ open, onClose }: SchedulingModalProps) => {
+export const SchedulingModal = ({ open, onClose, onConfirm }: SchedulingModalProps) => {
   const [email, setEmail] = useState('');
   const [selectedDate, setSelectedDate] = useState('');
   const [selectedTime, setSelectedTime] = useState('');
@@ -28,8 +29,9 @@ export const SchedulingModal = ({ open, onClose }: SchedulingModalProps) => {
       return;
     }
 
-    // Here you would save the appointment to your backend
     console.log('Appointment scheduled:', { email, selectedDate, selectedTime });
+
+    if (onConfirm) onConfirm(email, selectedDate, selectedTime);
 
     setIsScheduled(true);
     toast({

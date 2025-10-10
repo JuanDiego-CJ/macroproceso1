@@ -41,6 +41,52 @@ const Step3 = () => {
     setShowSchedulingModal(true);
   };
 
+  const handleScheduleCall = async (email: string, fecha: string, hora: string) => {
+    try {
+      console.log('Enviando datos a n8n...');
+      console.log({ email, fecha, hora });
+
+      const fechaInicio = new Date(`${fecha}T${hora}:00`);
+      const ahora = new Date();
+
+      // 🔒 Validar que la fecha no sea anterior a mañana
+      const mañana = new Date();
+      mañana.setDate(mañana.getDate() + 1);
+      mañana.setHours(0, 0, 0, 0);
+
+      if (fechaInicio < mañana) {
+        alert('No puedes agendar una llamada para hoy o una fecha pasada. Debe ser a partir de mañana.');
+        return;
+      }
+
+      const body = {
+        email,
+        monto: totalInitial,
+        fechaInicio: fechaInicio.toISOString(),
+      };
+
+      console.log('Payload final:', body);
+
+      const res = await fetch(import.meta.env.VITE_N8N_WEBHOOK_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+
+      console.log('Respuesta de n8n:', res.status);
+      const text = await res.text();
+      console.log('Texto recibido:', text);
+
+      if (!res.ok) throw new Error(`Error HTTP ${res.status}: ${text}`);
+
+      alert('Llamada agendada correctamente. Recibirás un correo con los detalles.');
+      setShowSchedulingModal(false);
+    } catch (error) {
+      console.error('Error al agendar:', error);
+      alert('Ocurrió un error al agendar la llamada.');
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background py-8">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -55,10 +101,7 @@ const Step3 = () => {
           </div>
 
           <div className="max-w-2xl mx-auto">
-            <ConfigSummary
-              showEdit
-              onEdit={() => navigate('/configurar/paso-2')}
-            />
+            <ConfigSummary showEdit onEdit={() => navigate('/configurar/paso-2')} />
 
             {isHighValue && (
               <Card className="p-4 mt-6 bg-primary/5 border-primary/20">
@@ -114,6 +157,7 @@ const Step3 = () => {
       <SchedulingModal
         open={showSchedulingModal}
         onClose={() => setShowSchedulingModal(false)}
+        onConfirm={handleScheduleCall}
       />
     </div>
   );
