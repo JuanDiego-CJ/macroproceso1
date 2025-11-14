@@ -1,18 +1,20 @@
+// @/pages/PaymentSuccess.tsx (CORREGIDO)
+
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom'; // 🚨 Importar useSearchParams
 import { CheckCircle2 } from 'lucide-react';
-
-interface LocationState {
-    orderId?: string; // Esperamos el OrderID que se nos pasó desde PaymentStatus
-}
 
 const PaymentSuccess = () => {
     const navigate = useNavigate();
-    // Usamos useLocation para acceder al 'state' pasado en la redirección
-    const location = useLocation();
-    const state = location.state as LocationState;
-    const orderId = state?.orderId || 'Desconocido';
+    
+    // 🚨 CORRECCIÓN: Usar useSearchParams para leer la URL.
+    const [searchParams] = useSearchParams();
+    const orderId = searchParams.get('orderId') || 'Desconocido';
+    const sessionId = searchParams.get('sessionId') || 'N/A';
+    
+    // Puedes usar sessionId si lo quieres mostrar o registrar en algún log.
+    console.log(`Verificación Finalizada. Session ID: ${sessionId}`);
 
     return (
         <div className="min-h-screen bg-background flex items-center justify-center py-12 px-4">
@@ -46,7 +48,7 @@ const PaymentSuccess = () => {
                         <li>Accede a tu panel de control para empezar a configurar tus módulos.</li>
                     </ul>
 
-                    <Button onClick={() => navigate('/dashboard')} className="w-full">
+                    <Button onClick={() => navigate('/')} className="w-full">
                         Ir al Panel de Control
                     </Button>
                 </div>

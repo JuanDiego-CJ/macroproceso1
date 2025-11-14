@@ -33,6 +33,9 @@ const Checkout = () => {
     const handlePayment = async () => {
         setIsProcessing(true);
         
+        // 🚨 CORRECCIÓN CLAVE: Agregar el session_id a la URL de éxito para Stripe
+        const successUrlWithSession = `${APP_BASE_URL}/pago/exitoso?session_id={CHECKOUT_SESSION_ID}`;
+        
         const payload = {
             // Datos del Usuario
             email: state.userEmail,
@@ -48,8 +51,8 @@ const Checkout = () => {
             modulesIds: state.selectedModules.map(m => m.id),
             
             // URLs de Stripe (para que n8n las use al crear la sesión)
-            // 🚨 FIX 1: La ruta correcta es /pago/exitoso (según tu App.tsx)
-            success_url: `${APP_BASE_URL}/pago/exitoso`, 
+            // 🚨 FIX 1: Usamos la URL corregida
+            success_url: successUrlWithSession, 
             cancel_url: `${APP_BASE_URL}/checkout`,
         };
 
@@ -110,7 +113,6 @@ const Checkout = () => {
         }
     };
 
-    // ... (El resto del componente es el mismo) ...
     return (
         <div className="min-h-screen bg-background py-12 px-4 sm:px-6 lg:px-8">
             <div className="max-w-5xl mx-auto">
