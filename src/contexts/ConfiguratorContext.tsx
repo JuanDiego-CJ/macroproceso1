@@ -1,4 +1,11 @@
+// @/contexts/ConfiguratorContext.tsx
+
 import React, { createContext, useContext, useState, ReactNode } from 'react';
+// ELIMINAMOS: import { findUser } from '@/data/userSimulator'; 
+// Ya no usamos el simulador local para el login.
+
+// 🚨 DEFINIMOS LA URL DEL WEBHOOK DE N8N PARA EL LOGIN
+const N8N_LOGIN_WEBHOOK_URL = import.meta.env.VITE_N8N_LOGIN_WEBHOOK_URL;
 
 export interface Module {
   id: string;
@@ -17,19 +24,32 @@ export interface Template {
   initialPrice: number;
 }
 
+// 2. INTERFAZ PARA EL USUARIO AUTENTICADO
+export interface AuthenticatedUser {
+    email: string;
+    name: string; 
+    isRecurring: boolean;
+    lastTemplateId: string | null;
+}
+
 export interface ConfiguratorState {
   selectedTemplate: Template | null;
   selectedModules: Module[];
   userEmail: string;
   userName: string;
+  authenticatedUser: AuthenticatedUser | null; 
 }
 
 interface ConfiguratorContextType {
+  // 🚀 CORRECCIÓN: AGREGAMOS 'state' aquí para que sea accesible
   state: ConfiguratorState;
+  
   selectTemplate: (template: Template) => void;
   toggleModule: (module: Module) => void;
   clearModules: () => void;
   setUserInfo: (email: string, name: string) => void;
+  loginUser: (email: string, passwordHash: string) => Promise<boolean>; 
+  isAuthenticated: () => boolean; 
   getTotalMonthly: () => number;
   getTotalInitial: () => number;
   resetConfiguration: () => void;
@@ -43,6 +63,7 @@ export const ConfiguratorProvider: React.FC<{ children: ReactNode }> = ({ childr
     selectedModules: [],
     userEmail: '',
     userName: '',
+    authenticatedUser: null,
   });
 
   const selectTemplate = (template: Template) => {
@@ -69,6 +90,62 @@ export const ConfiguratorProvider: React.FC<{ children: ReactNode }> = ({ childr
     setState(prev => ({ ...prev, userEmail: email, userName: name }));
   };
 
+  
+  // 5. 🚀 IMPLEMENTACIÓN DE loginUser (USANDO WEBHOOK DE N8N)
+  const loginUser = async (email: string, passwordHash: string): Promise<boolean> => {
+
+    if (!N8N_LOGIN_WEBHOOK_URL) {
+        console.error("Error: VITE_N8N_LOGIN_WEBHOOK_URL no está definida.");
+        return false;
+    }
+
+    try {
+        // 1. Llamada al Webhook de n8n (POST request)
+        const response = await fetch(N8N_LOGIN_WEBHOOK_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password: passwordHash }), 
+        });
+
+        if (!response.ok) {
+            console.error('Error HTTP al intentar iniciar sesión:', response.status);
+            return false;
+        }
+
+        const data = await response.json();
+        
+        // 2. Verificación de éxito según la respuesta de n8n
+        if (data.success && data.user) {
+            const foundUser = data.user; 
+            
+            // 3. Actualización del estado (Usando 'name' para el nombre completo)
+            setState(prev => ({ 
+                ...prev, 
+                userEmail: foundUser.email,
+                userName: foundUser.name, // <-- Usamos el Full name para el display
+                authenticatedUser: {
+                    email: foundUser.email,
+                    name: foundUser.name,
+                    isRecurring: foundUser.isRecurring,
+                    lastTemplateId: foundUser.lastTemplateId || null,
+                }
+            }));
+            return true;
+        }
+
+        return false; // Login fallido (credenciales incorrectas)
+
+    } catch (error) {
+        console.error('Error durante la conexión al Webhook de Login:', error);
+        return false;
+    }
+  };
+
+  // 6. IMPLEMENTACIÓN DE isAuthenticated (se mantiene igual)
+  const isAuthenticated = () => {
+      return state.authenticatedUser !== null;
+  };
+
   const getTotalMonthly = () => {
     const templatePrice = state.selectedTemplate?.monthlyPrice || 0;
     const modulesPrice = state.selectedModules.reduce((sum, m) => sum + m.monthlyPrice, 0);
@@ -87,6 +164,7 @@ export const ConfiguratorProvider: React.FC<{ children: ReactNode }> = ({ childr
       selectedModules: [],
       userEmail: '',
       userName: '',
+      authenticatedUser: null,
     });
   };
 
@@ -98,6 +176,8 @@ export const ConfiguratorProvider: React.FC<{ children: ReactNode }> = ({ childr
         toggleModule,
         clearModules,
         setUserInfo,
+        loginUser, 
+        isAuthenticated, 
         getTotalMonthly,
         getTotalInitial,
         resetConfiguration,

@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Stepper } from '@/components/Stepper';
@@ -8,15 +9,45 @@ import { modules } from '@/data/modules';
 import { cn } from '@/lib/utils';
 import { Check, HelpCircle } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+// --- Importaciones de Chat Context ---
+import { useChat } from '@/contexts/ChatContext'; 
+import FloatingChatBot from '@/components/ui/FloatingChatBot'; 
+
 
 const Step2 = () => {
   const navigate = useNavigate();
   const { state, toggleModule } = useConfigurator();
+  // Hook de Chat - Obtenemos messages, setIsOpen y setMessages para la lógica
+  const { messages, setIsOpen, addBotMessage, setMessages } = useChat(); 
 
   if (!state.selectedTemplate) {
     navigate('/configurar/paso-1');
     return null;
   }
+
+  // LÓGICA DE APERTURA Y MENSAJE INICIAL EN EL PASO 2
+  useEffect(() => {
+    // 1. Abrir el Chat automáticamente al entrar
+    setIsOpen(true);
+
+    // 2. Condición clave: Solo enviar el mensaje si el chat está vacío 
+    if (messages.length === 0) {
+        
+      // Obtener el nombre de la plantilla seleccionada
+      const templateName = state.selectedTemplate?.name || 'la solución base';
+      
+      // Construir el mensaje personalizado
+      const initialMessage = 
+        `¡Hola! Veo que has elegido la plantilla ${templateName}. ` +
+        `¿Posees alguna duda o alguna aclaración respecto de los módulos que ofrecemos?`+
+        `Soy un chatbot y estoy aquí para ayudarte a personalizar tu solución.`;
+        
+      // Añadir el mensaje al chat
+      addBotMessage(initialMessage);
+    }
+
+  // Dependencias: Mantenemos las dependencias necesarias.
+  }, [state.selectedTemplate, setIsOpen, addBotMessage, messages.length]);
 
   const isModuleSelected = (moduleId: string) => {
     return state.selectedModules.some((m) => m.id === moduleId);
@@ -90,7 +121,16 @@ const Step2 = () => {
               </div>
 
               <div className="flex gap-4 mt-8">
-                <Button variant="outline" size="lg" onClick={() => navigate('/configurar/paso-1')}>
+                <Button 
+                    variant="outline" 
+                    size="lg" 
+                    onClick={() => {
+                        // 🛑 Lógica de limpieza y cierre antes de navegar hacia atrás 🛑
+                        setMessages([]); 
+                        setIsOpen(false);
+                        navigate('/configurar/paso-1');
+                    }}
+                >
                   Volver
                 </Button>
                 <Button variant="gradient" size="lg" onClick={() => navigate('/configurar/paso-3')}>
@@ -106,6 +146,9 @@ const Step2 = () => {
           </div>
         </div>
       </div>
+      
+      {/* INTEGRACIÓN DEL CHAT BOT */}
+      <FloatingChatBot />
     </div>
   );
 };

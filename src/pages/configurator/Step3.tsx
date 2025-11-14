@@ -27,13 +27,15 @@ const Step3 = () => {
     if (isHighValue) {
       setShowQualificationModal(true);
     } else {
-      navigate('/crear-cuenta');
+      // 🎯 CAMBIO AQUÍ: Redirigir a Checkout
+      navigate('/checkout');
     }
   };
 
   const handleQualificationFinalize = () => {
     setShowQualificationModal(false);
-    navigate('/crear-cuenta');
+    // 🎯 CAMBIO AQUÍ: Redirigir a Checkout
+    navigate('/checkout');
   };
 
   const handleSchedule = () => {
@@ -47,9 +49,7 @@ const Step3 = () => {
       console.log({ email, fecha, hora });
 
       const fechaInicio = new Date(`${fecha}T${hora}:00`);
-      const ahora = new Date();
-
-      // 🔒 Validar que la fecha no sea anterior a mañana
+      
       const mañana = new Date();
       mañana.setDate(mañana.getDate() + 1);
       mañana.setHours(0, 0, 0, 0);
@@ -122,17 +122,6 @@ const Step3 = () => {
               <Button variant="gradient" size="lg" onClick={handleFinalize} className="w-full">
                 Finalizar compra ahora
               </Button>
-
-              {isHighValue && (
-                <Button
-                  variant="outline"
-                  size="lg"
-                  onClick={() => setShowSchedulingModal(true)}
-                  className="w-full"
-                >
-                  Hablar con un arquitecto (15 min)
-                </Button>
-              )}
 
               <Button
                 variant="ghost"

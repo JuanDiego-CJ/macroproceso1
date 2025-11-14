@@ -1,31 +1,93 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Stepper } from '@/components/Stepper';
 import { useNavigate } from 'react-router-dom';
-import { useConfigurator } from '@/contexts/ConfiguratorContext';
+import { useConfigurator, Template } from '@/contexts/ConfiguratorContext'; 
 import { templates } from '@/data/templates';
 import { cn } from '@/lib/utils';
 import { Check } from 'lucide-react';
+import { useChat } from '@/contexts/ChatContext'; 
+import { useToast } from '@/hooks/use-toast'; 
+import { getTemplateNameById } from '@/data/userSimulator'; 
 
 const Step1 = () => {
   const navigate = useNavigate();
-  const { state, selectTemplate } = useConfigurator();
+  const { 
+        state, 
+        selectTemplate,
+        isAuthenticated
+    } = useConfigurator();
+  
+  const { setMessages, setIsOpen, addBotMessage } = useChat(); 
+  const { toast } = useToast();
+
   const [selectedId, setSelectedId] = useState<string | null>(
     state.selectedTemplate?.id || null
   );
+  
+  const chatInitializedRef = useRef(false);
+
+  useEffect(() => {
+    if (chatInitializedRef.current) return;
+
+    setMessages([]); 
+    setIsOpen(false);
+
+    const user = state.authenticatedUser;
+
+    if (user && user.isRecurring && user.lastTemplateId) {
+        const templateName = getTemplateNameById(user.lastTemplateId) || 'desconocida';
+        
+        const proActiveMessage = 
+            `¡Bienvenido de vuelta, <strong>${user.name}</strong>! ` +
+            `Veo que tu último proyecto fue la plantilla <strong>${templateName}</strong>. ` +
+            `¿Quieres reanudar con esa base o prefieres elegir una nueva?`;
+        
+        setIsOpen(true);
+        addBotMessage(proActiveMessage);
+    } else {
+        const standardMessage = 
+            `¡Hola! Por favor, elige la plantilla que mejor se adapte a tu industria. Estoy aquí para guiarte.`;
+        setIsOpen(true);
+        addBotMessage(standardMessage);
+    }
+
+    chatInitializedRef.current = true;
+
+  }, [setMessages, setIsOpen, addBotMessage, state.authenticatedUser]); 
+
+  const handleSelectAndGuard = (template: Template) => {
+    setSelectedId(template.id);
+    selectTemplate(template);
+
+    if (isAuthenticated()) {
+        navigate('/configurar/paso-2');
+    } else {
+        toast({
+            title: '¡Paso Obligatorio!',
+            description: 'Inicia sesión o regístrate para guardar tu selección y continuar personalizando tu solución.',
+            duration: 4000,
+            variant: 'default',
+        });
+        
+        navigate('/sign-in'); 
+    }
+  };
 
   const handleSelect = (templateId: string) => {
     const template = templates.find((t) => t.id === templateId);
     if (template) {
-      setSelectedId(templateId);
-      selectTemplate(template);
+      handleSelectAndGuard(template);
     }
   };
 
   const handleContinue = () => {
     if (selectedId) {
-      navigate('/configurar/paso-2');
+        const template = templates.find((t) => t.id === selectedId);
+        if (template) {
+            handleSelectAndGuard(template); 
+        }
     }
   };
 

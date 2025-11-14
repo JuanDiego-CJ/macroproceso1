@@ -1,158 +1,169 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Checkbox } from '@/components/ui/checkbox';
+// import { Checkbox } from '@/components/ui/checkbox'; // No se usa en el componente
 import { useNavigate } from 'react-router-dom';
 import { useConfigurator } from '@/contexts/ConfiguratorContext';
 import { useToast } from '@/hooks/use-toast';
 import { Eye, EyeOff } from 'lucide-react';
+// ELIMINAMOS: import { mockUsers } from '@/data/userSimulator'; 
 
-const CreateAccount = () => {
-  const navigate = useNavigate();
-  const { state, setUserInfo } = useConfigurator();
-  const { toast } = useToast();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [acceptTerms, setAcceptTerms] = useState(false);
-  const [errors, setErrors] = useState<Record<string, string>>({});
+const SignIn = () => { 
+  const navigate = useNavigate();
+  
+  const { 
+    state, 
+    loginUser, 
+    isAuthenticated
+  } = useConfigurator();
 
-  if (!state.selectedTemplate) {
-    navigate('/configurar/paso-1');
-    return null;
-  }
+  const { toast } = useToast();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [isLoading, setIsLoading] = useState(false);
 
-  const validateForm = () => {
-    const newErrors: Record<string, string> = {};
+  // 1. Guardián inicial: Si ya está logueado, vamos al paso 2
+  useEffect(() => {
+    if (isAuthenticated()) {
+        navigate('/configurar/paso-2'); 
+    }
+  }, [isAuthenticated, navigate]);
 
-    if (!email.trim()) {
-      newErrors.email = 'El email es requerido';
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      newErrors.email = 'Email inválido';
-    }
+  // Si no ha seleccionado plantilla, lo mandamos al paso 1
+  if (!state.selectedTemplate && !isAuthenticated()) {
+    navigate('/configurar/paso-1');
+    return null;
+  }
 
-    if (!password) {
-      newErrors.password = 'La contraseña es requerida';
-    } else if (password.length < 8) {
-      newErrors.password = 'La contraseña debe tener al menos 8 caracteres';
-    }
+  const validateForm = () => {
+    const newErrors: Record<string, string> = {};
+    if (!email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      newErrors.email = 'Email inválido o requerido';
+    }
+    if (!password) {
+      newErrors.password = 'La contraseña es requerida';
+    }
 
-    if (!acceptTerms) {
-      newErrors.terms = 'Debes aceptar los términos de servicio';
-    }
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
 
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
+  // 2. Lógica de SUBMIT: Usamos loginUser (Ahora llama a n8n)
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrors({});
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+    if (!validateForm()) {
+      toast({
+        title: 'Error en el formulario',
+        description: 'Por favor, completa los campos requeridos.',
+        variant: 'destructive',
+      });
+      return;
+    }
 
-    if (!validateForm()) {
-      toast({
-        title: 'Error en el formulario',
-        description: 'Por favor corrige los errores antes de continuar',
-        variant: 'destructive',
-      });
-      return;
-    }
+    setIsLoading(true);
 
-    setUserInfo(email, password);
+    // 🚀 Ejecuta la función del contexto, que ahora hace el fetch a n8n
+    const loginSuccessful = await loginUser(email, password);
 
-    toast({
-      title: 'Cuenta creada',
-      description: 'Redirigiendo al checkout...',
-    });
+    setIsLoading(false);
 
-    setTimeout(() => {
-      navigate('/checkout');
-    }, 1000);
-  };
+    if (loginSuccessful) {
+        toast({
+            title: 'Inicio de Sesión Exitoso',
+            description: 'Redirigiendo a tu configuración...',
+        });
+        
+        setTimeout(() => {
+            navigate('/configurar/paso-2'); 
+        }, 500);
 
-  return (
-    <div className="min-h-screen bg-background flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-      <Card className="max-w-md w-full p-8">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold mb-2">Crear Cuenta</h1>
-          <p className="text-muted-foreground">
-            Un paso más para finalizar tu configuración
-          </p>
-        </div>
+    } else {
+        setErrors({ general: 'Credenciales incorrectas. Intenta de nuevo.' });
+        toast({
+            title: 'Fallo al iniciar sesión',
+            // CORRECCIÓN: Mensaje genérico, eliminamos la referencia a mockUsers
+            description: 'Verifica tu email y contraseña e inténtalo de nuevo.',
+            variant: 'destructive',
+        });
+    }
+  };
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              placeholder="tu@email.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className={errors.email ? 'border-destructive' : ''}
-            />
-            {errors.email && <p className="text-sm text-destructive">{errors.email}</p>}
-          </div>
+  return (
+    <div className="min-h-screen bg-background flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+      <Card className="max-w-md w-full p-8">
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-bold mb-2">Inicia Sesión</h1>
+          <p className="text-muted-foreground">
+            Continúa donde lo dejaste o accede a tu historial.
+          </p>
+        </div>
+        
+        {errors.general && <p className="text-sm text-destructive text-center mb-4">{errors.general}</p>}
 
-          <div className="space-y-2">
-            <Label htmlFor="password">Contraseña</Label>
-            <div className="relative">
-              <Input
-                id="password"
-                type={showPassword ? 'text' : 'password'}
-                placeholder="Mínimo 8 caracteres"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className={errors.password ? 'border-destructive' : ''}
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-              >
-                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-              </button>
-            </div>
-            {errors.password && <p className="text-sm text-destructive">{errors.password}</p>}
-          </div>
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="space-y-2">
+            <Label htmlFor="email">Email</Label>
+            <Input
+              id="email"
+              type="email"
+              placeholder="tu@email.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              disabled={isLoading}
+              className={errors.email ? 'border-destructive' : ''}
+            />
+            {errors.email && <p className="text-sm text-destructive">{errors.email}</p>}
+          </div>
 
-          <div className="space-y-2">
-            <div className="flex items-start gap-3">
-              <Checkbox
-                id="terms"
-                checked={acceptTerms}
-                onCheckedChange={(checked) => setAcceptTerms(checked as boolean)}
-                className={errors.terms ? 'border-destructive' : ''}
-              />
-              <Label htmlFor="terms" className="text-sm leading-relaxed cursor-pointer">
-                Acepto los{' '}
-                <a href="#" className="text-primary hover:underline">
-                  Términos de Servicio
-                </a>{' '}
-                y el{' '}
-                <a href="#" className="text-primary hover:underline">
-                  Contrato de Prestación
-                </a>
-              </Label>
-            </div>
-            {errors.terms && <p className="text-sm text-destructive">{errors.terms}</p>}
-          </div>
+          <div className="space-y-2">
+            <Label htmlFor="password">Contraseña</Label>
+            <div className="relative">
+              <Input
+                id="password"
+                type={showPassword ? 'text' : 'password'}
+                placeholder="Mínimo 8 caracteres"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                disabled={isLoading}
+                className={errors.password ? 'border-destructive' : ''}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              >
+                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
+            {errors.password && <p className="text-sm text-destructive">{errors.password}</p>}
+          </div>
 
-          <Button type="submit" variant="gradient" size="lg" className="w-full">
-            Crear cuenta y continuar al pago
-          </Button>
+          <Button 
+              type="submit" 
+              variant="gradient" 
+              size="lg" 
+              className="w-full"
+              disabled={isLoading}
+            >
+            {isLoading ? 'Verificando...' : 'Iniciar Sesión'}
+          </Button>
 
-          <p className="text-center text-sm text-muted-foreground">
-            ¿No tienes cuenta?{' '}
-            <button type='button' className="text-primary hover:underline" onClick={()=>navigate('/sign-in')}>
-              Regístrate aquí
-            </button>
-          </p>
-        </form>
-      </Card>
-    </div>
-  );
+          <p className="text-center text-sm text-muted-foreground">
+            ¿No tienes cuenta?{' '}
+            <button type='button' className="text-primary hover:underline" onClick={()=>navigate('/crear-cuenta')}>
+              Regístrate aquí
+            </button>
+          </p>
+        </form>
+      </Card>
+    </div>
+  );
 };
 
-export default CreateAccount;
+export default SignIn;
